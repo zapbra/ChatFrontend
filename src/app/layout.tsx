@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import AuthWrapper from "./components/auth/AuthWrapper";
+import { CookieService } from "@/classes/database/CookieService";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -23,12 +25,23 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieObject = CookieService.getCookies();
+
+  console.log("Cookie object");
+  console.log(cookieObject);
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <AuthWrapper
+          value={{
+            authenticated: cookieObject?.authenticated ?? false,
+            userCookies: cookieObject,
+          }}
+        >
+          {children}
+        </AuthWrapper>
       </body>
     </html>
   );

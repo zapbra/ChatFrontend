@@ -1,3 +1,4 @@
+import { useAuth } from "@/app/components/auth/AuthWrapper";
 import Signup from "./components/Signup";
 
 const SignupPage = () => {
