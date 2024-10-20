@@ -5,6 +5,7 @@ import { UserService } from "@/classes/database/UserService";
 import { CookieService } from "@/classes/database/CookieService";
 import Image from "next/image";
 import { Connector, SignalConnector } from "@/classes/database/SignalConnector";
+import GroupList from "./components/chat/Grouplist";
 
 type Message = {
     username: string;
@@ -29,13 +30,6 @@ export default function Home() {
             try {
                 const connection = await Connector.startConnection();
                 if (connection && !listenerAdded.current) {
-                    // connection.on("ReceiveMessage", (username, message) => {
-                    //     console.log("Message received", username, message);
-                    //     setMessages((prevMessages) => {
-                    //         return [...prevMessages, { username, message }];
-                    //     });
-                    // });
-
                     Connector.registerGlobalCallback((username, message) => {
                         setMessages((prevMessages) => {
                             return [...prevMessages, { username, message }];
@@ -71,7 +65,7 @@ export default function Home() {
                     </p>
                 );
             })}
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="mb-8">
                 <TextField
                     label="message"
                     onChange={(e) => setMessage(e.target.value)}
@@ -88,6 +82,8 @@ export default function Home() {
                     Send
                 </Button>
             </form>
+
+            <GroupList />
         </div>
     );
 }

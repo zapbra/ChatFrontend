@@ -47,8 +47,8 @@ export class Connector {
     ) {
         try {
             if (this.connection != null) {
-                this.connection.on("ReceiveMessage", (username, password) =>
-                    callbackFunction(username, password)
+                this.connection.on("ReceiveMessage", (username, message) =>
+                    callbackFunction(username, message)
                 );
             } else {
                 throw new Error("Connection does not exist");
@@ -58,23 +58,70 @@ export class Connector {
         }
     }
 
-    static async joinGroup(group: string) {
+    static async registerGroupGlobalCallback(
+        callbackFunction: (
+            group: string,
+            username: string,
+            message: string
+        ) => void
+    ) {
         try {
-            if (this.connection) {
-                this.connection.invoke("AddToGroup", group);
+            if (this.connection != null) {
+                this.connection.on(
+                    "ReceiveMessage",
+                    (group, username, message) => {
+                        callbackFunction(group, username, message);
+                    }
+                );
+            } else {
+                throw new Error("Connection does not exist");
+            }
+        } catch (err) {
+            console.log("Failed to register group global callback", err);
+        }
+    }
+
+    static async joinGroup(group: string, username: string) {
+        try {
+            if (this.connection != null) {
+                this.connection.invoke("AddToGroup", group, username);
             }
         } catch (err) {
             console.log(`Failed to join group: ${group}`, err);
         }
     }
 
-    static async leaveGroup(group: string) {
+    static async leaveGroup(group: string, username: string) {
         try {
             if (this.connection) {
-                this.connection.invoke("RemoveFromGroup", group);
+                this.connection.invoke("RemoveFromGroup", group, username);
             }
         } catch (err) {
             console.log(`Failed to leave group: ${group}`, err);
+        }
+    }
+
+    static async sendGroupChatMessage(
+        groupName: string,
+        username: string,
+        message: string
+    ) {
+        try {
+            if (this.connection != null) {
+                await this.connection.invoke(
+                    "SendGroupMessage",
+                    groupName,
+                    username,
+                    message
+                );
+            } else {
+                throw new Error("Connection does not exist");
+            }
+        } catch (err) {
+            console.log(
+                `Failed to send group chat message to group: ${groupName}`,
+                err
+            );
         }
     }
 }
