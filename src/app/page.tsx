@@ -1,48 +1,93 @@
 "use client";
+import React, { useEffect, useState, useRef } from "react";
+import { TextField, Button } from "@mui/material";
 import { UserService } from "@/classes/database/UserService";
 import { CookieService } from "@/classes/database/CookieService";
 import Image from "next/image";
+import { Connector, SignalConnector } from "@/classes/database/SignalConnector";
+
+type Message = {
+    username: string;
+    message: string;
+};
 
 export default function Home() {
-  async function callUserService() {
-    const response = await UserService.signupUserLogin(
-      "test1@gmail.com",
-      "blabla",
-      "blabla",
-      ""
+    const [message, setMessage] = useState("");
+    const [messages, setMessages] = useState<Message[]>([]);
+    const listenerAdded = useRef(false);
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        console.log("Sending message");
+        e.preventDefault();
+        if (message !== "") {
+            Connector.sendGlobalChatMessage("james franko", message);
+            setMessage("");
+        }
+    };
+
+    useEffect(() => {
+        const setupConnection = async () => {
+            try {
+                const connection = await Connector.startConnection();
+                if (connection && !listenerAdded.current) {
+                    // connection.on("ReceiveMessage", (username, message) => {
+                    //     console.log("Message received", username, message);
+                    //     setMessages((prevMessages) => {
+                    //         return [...prevMessages, { username, message }];
+                    //     });
+                    // });
+
+                    Connector.registerGlobalCallback((username, message) => {
+                        setMessages((prevMessages) => {
+                            return [...prevMessages, { username, message }];
+                        });
+                    });
+                }
+
+                listenerAdded.current = true;
+            } catch (err) {
+                console.log("Error setting up connection", err);
+            }
+        };
+
+        setupConnection();
+
+        return () => {
+            if (Connector.connection) {
+                Connector.connection.off("ReceiveMessage");
+                listenerAdded.current = false;
+            }
+        };
+    }, []);
+
+    return (
+        <div className="mx-auto max-w-4xl p-4">
+            <div className="mb-4"></div>
+            <h1 className="text-2xl text-green-500 mb-2">Chat Messages</h1>
+            {messages.map(({ username, message }, index) => {
+                return (
+                    <p key={index}>
+                        <span className="text-green-500">{username}: </span>{" "}
+                        {message}{" "}
+                    </p>
+                );
+            })}
+            <form onSubmit={handleSubmit}>
+                <TextField
+                    label="message"
+                    onChange={(e) => setMessage(e.target.value)}
+                    required
+                    variant="outlined"
+                    color="secondary"
+                    type="type"
+                    sx={{ mb: 1 }}
+                    fullWidth
+                    value={message}
+                />
+
+                <Button variant="outlined" color="secondary" type="submit">
+                    Send
+                </Button>
+            </form>
+        </div>
     );
-    console.log("response");
-    console.log(response);
-  }
-
-  const addCookie = () => {
-    const now = new Date();
-    const date = new Date(now.getFullYear(), now.getMonth() + 1).toUTCString();
-    console.log("date");
-    console.log(date);
-    document.cookie = `salad=greek; path=/; expires=${date}`;
-  };
-
-  const cookies = document.cookie;
-
-  console.log("cookies in page");
-  console.log(cookies);
-
-  return (
-    <div>
-      <div
-        onClick={callUserService}
-        className="m-4 p-4 bg-red-500 text-white max-w-40 text-center cursor-pointer mx-auto hover:bg-red-700"
-      >
-        click me bitch
-      </div>
-
-      <div
-        onClick={addCookie}
-        className="m-4 p-4 bg-blue-500 text-white max-w-40 text-center cursor-pointer mx-auto hover:bg-blue-700"
-      >
-        click me to add a cookie
-      </div>
-    </div>
-  );
 }

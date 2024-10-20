@@ -1,20 +1,80 @@
 import * as signalR from "@microsoft/signalr";
 
-export class SignalConnector {
-  hub_url = process.env.NEXT_PUBLIC_HUB_ADDRESS ?? "";
-  private connection: signalR.HubConnection;
-  static instance: SignalConnector;
-  constructor() {
-    this.connection = new signalR.HubConnectionBuilder()
-      .withUrl(this.hub_url)
-      .build();
-    this.connection.start().catch((err) => document.write(err));
-  }
+const hubURL = process.env.NEXT_PUBLIC_HUB_ADDRESS ?? "";
 
-  public static getInstance(): SignalConnector {
-    if (!SignalConnector.instance) {
-      SignalConnector.instance = new SignalConnector();
+export class Connector {
+    static connection: signalR.HubConnection | null = null;
+
+    static async startConnection() {
+        try {
+            if (this.connection == null) {
+                this.connection = new signalR.HubConnectionBuilder()
+                    .withUrl(hubURL)
+                    .build();
+                await this.connection.start();
+            }
+        } catch (err) {
+            console.log("Failed to start connection", err);
+        }
+
+        return this.connection;
     }
-    return SignalConnector.instance;
-  }
+
+    static closeConnection() {
+        if (this.connection != null) {
+            this.connection.stop().then(() => {
+                console.log("Connection stopped");
+            });
+        } else {
+            console.log("Connection does not exist");
+        }
+    }
+
+    static async sendGlobalChatMessage(username: string, message: string) {
+        try {
+            if (this.connection != null) {
+                await this.connection.invoke("SendMessage", username, message);
+            } else {
+                throw new Error("Connection does not exist");
+            }
+        } catch (err) {
+            console.log("Failed to send global chat message", err);
+        }
+    }
+
+    static async registerGlobalCallback(
+        callbackFunction: (username: string, message: string) => void
+    ) {
+        try {
+            if (this.connection != null) {
+                this.connection.on("ReceiveMessage", (username, password) =>
+                    callbackFunction(username, password)
+                );
+            } else {
+                throw new Error("Connection does not exist");
+            }
+        } catch (err) {
+            console.log("Failed to register global callback", err);
+        }
+    }
+
+    static async joinGroup(group: string) {
+        try {
+            if (this.connection) {
+                this.connection.invoke("AddToGroup", group);
+            }
+        } catch (err) {
+            console.log(`Failed to join group: ${group}`, err);
+        }
+    }
+
+    static async leaveGroup(group: string) {
+        try {
+            if (this.connection) {
+                this.connection.invoke("RemoveFromGroup", group);
+            }
+        } catch (err) {
+            console.log(`Failed to leave group: ${group}`, err);
+        }
+    }
 }
